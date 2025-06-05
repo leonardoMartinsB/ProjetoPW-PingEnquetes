@@ -1,0 +1,151 @@
+﻿@{
+    ViewData["Title"] = "Registrar";
+}
+
+<link rel="stylesheet" href="~/css/login.css" asp-append-version="true" />
+
+<div class="login-page-container">
+    <div class="login-auth-container">
+        <div class="login-auth-card">
+            <div class="login-logo-section">
+                <div class="login-logo">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <h2 class="login-title">Criar conta no Ping!</h2>
+            </div>
+
+            <form id="registerForm" method="post">
+                <div class="login-form-group">
+                    <label for="name" class="login-form-label">
+                        <i class="fas fa-user me-2"></i>Seu nome
+                    </label>
+                    <input type="text" id="name" name="name" class="login-form-control" required
+                           placeholder="Digite seu nome completo">
+                    <small class="text-muted" style="font-size: 12px; color: #718096; margin-top: 5px; display: block;">Apenas letras são permitidas</small>
+                </div>
+
+                <div class="login-form-group">
+                    <label for="email" class="login-form-label">
+                        <i class="fas fa-envelope me-2"></i>Email
+                    </label>
+                    <input type="email" id="email" name="email" class="login-form-control" required
+                           placeholder="Digite seu email">
+                </div>
+
+                <div class="login-form-group">
+                    <label for="password" class="login-form-label">
+                        <i class="fas fa-lock me-2"></i>Senha
+                    </label>
+                    <input type="password" id="password" name="password" class="login-form-control" required
+                           placeholder="Digite sua senha">
+                </div>
+
+                <button type="submit" class="login-btn-primary mb-3" id="registerBtn">
+                    <i class="fas fa-user-plus me-2"></i>Registrar
+                </button>
+
+                <div class="login-auth-links">
+                    Já tem uma conta? <a asp-action="Login">Faça login</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Sucesso -->
+<div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="login-modal-content modal-content">
+            <div class="login-modal-body modal-body text-center">
+                <div class="login-success-icon">
+                    <i class="fas fa-check"></i>
+                </div>
+                <h5 class="modal-title mb-3" id="successMessage">Conta criada com sucesso!</h5>
+                <p class="text-muted">Você será redirecionado em breve...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Erro -->
+<div class="modal fade" id="errorModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="login-modal-content modal-content">
+            <div class="login-modal-body modal-body text-center">
+                <div class="login-error-icon">
+                    <i class="fas fa-exclamation-circle"></i>
+                </div>
+                <h5 class="modal-title mb-3" id="errorMessage">Ocorreu um erro</h5>
+                <p class="text-muted mb-3" id="errorDetails">Detalhes do erro aqui...</p>
+                <button type="button" class="login-btn-primary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            $('.login-form-control').on('focus', function() {
+                $(this).parent().find('.login-form-label').addClass('active');
+            }).on('blur', function() {
+                if (!$(this).val()) {
+                    $(this).parent().find('.login-form-label').removeClass('active');
+                }
+            });
+
+            $('#registerForm').on('submit', function(e) {
+                e.preventDefault();
+                const registerBtn = $('#registerBtn');
+                const originalText = registerBtn.html();
+
+                registerBtn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Registrando...')
+                       .prop('disabled', true);
+
+                $.ajax({
+                    url: '@Url.Action("Register", "Account")',
+                    type: 'POST',
+                    data: $(this).serialize(),
+                    success: function(response) {
+                        registerBtn.html(originalText).prop('disabled', false);
+
+                        if (response.success) {
+                            $('#successMessage').text(response.message);
+                            $('#successModal').modal('show');
+
+                            setTimeout(function() {
+                                window.location.href = response.redirectUrl || '@Url.Action("Index", "Enquete")';
+                            }, 2000);
+                        } else {
+                            showErrorModal(response.message);
+                        }
+                    },
+                    error: function(xhr) {
+                        registerBtn.html(originalText).prop('disabled', false);
+
+                        let errorMsg = "Ocorreu um erro inesperado. Tente novamente.";
+
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            if (response && response.message) {
+                                errorMsg = response.message;
+                            }
+                        } catch (e) {
+                            console.error("Erro ao parsear resposta:", e);
+                        }
+
+                        showErrorModal(errorMsg);
+                    }
+                });
+            });
+
+            function showErrorModal(message, details = '') {
+                $('#errorMessage').text(message);
+                $('#errorDetails').text(details || 'Verifique seus dados e tente novamente.');
+                $('#errorModal').modal('show');
+            }
+        });
+    </script>
+}

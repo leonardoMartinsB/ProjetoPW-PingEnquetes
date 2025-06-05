@@ -1,0 +1,446 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Ping!</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/layout.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
+
+</head>
+<body class="loading">
+    <header class="main-header">
+        <nav class="navbar navbar-expand-lg">
+            <div class="container">
+                @{
+                    var isAuthenticated = User.Identity.IsAuthenticated;
+                }
+                @if (isAuthenticated)
+                {
+                    <a class="navbar-brand" href="javascript:void(0)" id="brandLogo">
+                        <div class="brand-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <span>Ping!</span>
+                    </a>
+                }
+                else
+                {
+                    <a class="navbar-brand" href="javascript:void(0)" id="brandLogoGuest">
+                        <div class="brand-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <span>Ping!</span>
+                    </a>
+                }
+                @{
+                    var isAuthPage = Context.Request.Path.StartsWithSegments("/Account/Login") ||
+                    Context.Request.Path.StartsWithSegments("/Account/Register");
+                }
+                @if (!isAuthPage)
+                {
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent"
+                            aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse" id="navbarContent">
+                        @if (User.Identity.IsAuthenticated)
+                        {
+                            <ul class="navbar-nav center-nav">
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="Enquete" asp-action="Index">
+                                        <i class="fas fa-home"></i> Inicío
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="Enquete" asp-action="Listar">
+                                        <i class="fas fa-poll"></i> Ver Enquetes
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="Enquete" asp-action="Criar">
+                                        <i class="fas fa-plus-circle"></i> Criar Enquete
+                                    </a>
+                                </li>
+                            </ul>
+                            <ul class="navbar-nav user-nav ms-auto">
+                                <li class="nav-item dropdown">
+                                    <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button"
+                                       data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="fas fa-user-circle"></i> Olá, @User.Identity.Name
+                                    </a>
+                                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                                        <li>
+                                            <a class="nav-link" asp-controller="Enquete" asp-action="Gerenciar">
+                                                <i class="fas fa-tasks"></i> Gerenciar
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <button type="button" class="dropdown-item" id="logoutBtn">
+                                                <i class="fas fa-sign-out-alt"></i> Sair
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        }
+                        else
+                        {
+                            <ul class="navbar-nav ms-auto">
+                                <li class="nav-item ms-lg-3">
+                                    <a class="btn btn-login" asp-controller="Account" asp-action="Login">
+                                        <i class="fas fa-user-circle"></i> Entrar
+                                    </a>
+                                </li>
+                            </ul>
+                        }
+                    </div>
+                }
+            </div>
+        </nav>
+    </header>
+
+    <div class="modal fade exit-confirmation-overlayy" id="exitConfirmationDialog" tabindex="-1" aria-labelledby="exitDialogLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content exit-confirmation-dialog">
+                <div class="modal-header dialog-header">
+                    <h5 class="modal-title dialog-title" id="exitDialogLabel">
+                        <i class="fas fa-door-open"></i>Confirmar Saída
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body dialog-body">
+                    <div class="confirmation-icon">
+                        <i class="fas fa-question-circle"></i>
+                    </div>
+                    <p class="confirmation-message">Você está prestes a sair da sua conta. Tem certeza que deseja continuar?</p>
+                </div>
+                <div class="modal-footer dialog-footer">
+                    <button type="button" class="btn cancel-btn action-btn" data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn confirm-btn action-btn" id="confirmExit">
+                        <span class="spinner"></span>
+                        <span class="btn-text"><i class="fas fa-sign-out-alt"></i> Sair</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form id="logoutForm" asp-controller="Account" asp-action="Logout" method="post" style="display: none;">
+        @Html.AntiForgeryToken()
+    </form>
+
+    <main class="main-content">
+        <div class="container-fluid">
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show mt-3" role="alert">
+                    @TempData["SuccessMessage"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+            @if (TempData["ErrorMessage"] != null)
+            {
+                <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
+                    @TempData["ErrorMessage"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+            @RenderBody()
+        </div>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="row">
+                    <div class="col-lg-4 col-md-6 mb-4">
+                        <div class="footer-section">
+                            <div class="footer-brand">
+                                <i class="fas fa-check-circle"></i>
+                                Ping!
+                            </div>
+                            <p>A plataforma mais moderna para criar enquetes, coletar votos e analisar resultados em tempo real. Transforme opiniões em decisões inteligentes.</p>
+                            <div class="social-links">
+                                <a href="#" class="social-link" title="Facebook">
+                                    <i class="fab fa-facebook-f"></i>
+                                </a>
+                                <a href="#" class="social-link" title="Twitter">
+                                    <i class="fab fa-twitter"></i>
+                                </a>
+                                <a href="#" class="social-link" title="Instagram">
+                                    <i class="fab fa-instagram"></i>
+                                </a>
+                                <a href="#" class="social-link" title="LinkedIn">
+                                    <i class="fab fa-linkedin-in"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-4 col-md-6 mb-4">
+                        <div class="footer-section">
+                            <h5>Contato & Suporte</h5>
+                            <ul>
+                                <li>
+                                    <i class="fas fa-envelope"></i>
+                                    contato@ping.com.br
+                                </li>
+                                <li>
+                                    <i class="fas fa-phone"></i>
+                                    (15) 98765-4321
+                                </li>
+                                <li>
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    Sorocaba, São Paulo - BR
+                                </li>
+                                <li>
+                                    <i class="fas fa-clock"></i>
+                                    Seg-Sex: 7h às 19h
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-4 col-md-12 mb-4">
+                        <div class="footer-section">
+                            <h5>Links Rápidos</h5>
+                            <ul>
+                                <li>
+                                    <i class="fas fa-home"></i>
+                                    <a asp-controller="Home" asp-action="Index" style="color: #a0aec0; text-decoration: none;">Página Inicial</a>
+                                </li>
+                                <li>
+                                    <i class="fas fa-poll"></i>
+                                    <a asp-controller="Enquete" asp-action="Enquete" style="color: #a0aec0; text-decoration: none;">Ver Enquetes</a>
+                                </li>
+                                <li>
+                                    <i class="fas fa-plus-circle"></i>
+                                    <a asp-controller="Enquete" asp-action="Criar" style="color: #a0aec0; text-decoration: none;">Criar Enquete</a>
+                                </li>
+                                <li>
+                                    <i class="fas fa-question-circle"></i>
+                                    <a href="#" style="color: #a0aec0; text-decoration: none;">FAQ & Ajuda</a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="footer-divider">
+
+                <div class="footer-bottom">
+                    <p>&copy; 2025 Ping! - Todos os direitos reservados. Desenvolvido por Leonardo e Pedro.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/layout.js" asp-append-version="true"></script>
+
+    <script>
+        $(document).ready(function() {
+            // Comportamento de clique duplo no logo
+            let clickCount = 0;
+            let clickTimer = null;
+            const doubleClickDelay = 400;
+
+            $('#brandLogo').click(function(e) {
+                e.preventDefault();
+                clickCount++;
+
+                const currentPath = window.location.pathname.toLowerCase();
+                const isOnHomePage = currentPath === '/' || currentPath === '/home' || currentPath === '/home/index';
+
+                if (clickCount === 1) {
+                    clickTimer = setTimeout(function() {
+                        if (isOnHomePage) {
+                            location.reload();
+                        } else {
+                            window.location.href = '@Url.Action("Index", "Enquete")';
+                        }
+                        clickCount = 0;
+                    }, doubleClickDelay);
+                } else if (clickCount === 2) {
+                    clearTimeout(clickTimer);
+                    window.location.href = '@Url.Action("Index", "Home")';
+                    clickCount = 0;
+                }
+            });
+
+            $('#brandLogoGuest').click(function(e) {
+                e.preventDefault();
+                location.reload();
+            });
+
+            $(document).click(function(e) {
+                if (!$(e.target).closest('#brandLogo').length) {
+                    setTimeout(function() {
+                        clickCount = 0;
+                        if (clickTimer) {
+                            clearTimeout(clickTimer);
+                        }
+                    }, doubleClickDelay + 100);
+                }
+            });
+
+            // Logica do modal de logout moderno
+            $('#logoutBtn').click(function(e) {
+                e.preventDefault();
+                $('#exitConfirmationDialog').modal('show');
+            });
+
+            $('#confirmExit').click(function() {
+                const $btn = $(this);
+                $btn.addClass('loading');
+
+                $.ajax({
+                    url: $('#logoutForm').attr('action'),
+                    type: 'POST',
+                    data: $('#logoutForm').serialize(),
+                    timeout: 10000,
+                    success: function(response) {
+                        if (response && response.success) {
+                            $('#exitConfirmationDialog').modal('hide');
+                            setTimeout(() => {
+                                window.location.href = response.redirectUrl || '/';
+                            }, 300);
+                        } else {
+                            showLogoutError('Ocorreu um erro ao processar sua solicitação.');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        if (xhr.status === 302 || xhr.status === 301 || xhr.status === 0) {
+                            $('#exitConfirmationDialog').modal('hide');
+                            setTimeout(() => {
+                                window.location.href = '/';
+                            }, 300);
+                        } else {
+                            showLogoutError('Erro de conexão. Verifique sua internet.');
+                        }
+                    },
+                    complete: function() {
+                        $btn.removeClass('loading');
+                    }
+                });
+            });
+
+            // Função para mostrar mensagens de erro estilizadas
+            function showLogoutError(message) {
+                // Verifica se já existe um toast aberto para evitar duplicação
+                if ($('.logout-error-toast').length > 0) {
+                    $('.logout-error-toast').remove();
+                }
+
+                // Cria o toast de erro
+                const toast = $(`
+                    <div class="logout-error-toast">
+                        <div class="toast-icon">
+                            <i class="fas fa-exclamation-circle"></i>
+                        </div>
+                        <div class="toast-message">${message}</div>
+                        <button class="toast-close">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                `);
+
+                $('body').append(toast);
+
+                // Animação de entrada
+                setTimeout(() => {
+                    toast.addClass('show');
+                }, 10);
+
+                // Fecha automaticamente após 5 segundos
+                const autoClose = setTimeout(() => {
+                    toast.removeClass('show');
+                    setTimeout(() => toast.remove(), 300);
+                }, 5000);
+
+                // Fecha ao clicar no botão
+                toast.find('.toast-close').click(function() {
+                    clearTimeout(autoClose);
+                    toast.removeClass('show');
+                    setTimeout(() => toast.remove(), 300);
+                });
+            }
+
+            // Adiciona estilos dinâmicos para o toast de erro (apenas se não existir)
+            if (!$('#logoutErrorToastStyle').length) {
+                $('head').append(`
+                    <style id="logoutErrorToastStyle">
+                        .logout-error-toast {
+                            position: fixed;
+                            bottom: 20px;
+                            right: 20px;
+                            background: white;
+                            padding: 1rem 1.5rem;
+                            border-radius: 12px;
+                            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+                            display: flex;
+                            align-items: center;
+                            gap: 1rem;
+                            transform: translateY(100px);
+                            opacity: 0;
+                            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+                            z-index: 1100;
+                            border-left: 4px solid #f43f5e;
+                            max-width: 400px;
+                        }
+                        .logout-error-toast.show {
+                            transform: translateY(0);
+                            opacity: 1;
+                        }
+                        .logout-error-toast .toast-icon {
+                            color: #f43f5e;
+                            font-size: 1.5rem;
+                            flex-shrink: 0;
+                        }
+                        .logout-error-toast .toast-message {
+                            color: #374151;
+                            font-weight: 500;
+                            flex-grow: 1;
+                        }
+                        .logout-error-toast .toast-close {
+                            background: none;
+                            border: none;
+                            color: #9ca3af;
+                            cursor: pointer;
+                            margin-left: 1rem;
+                            transition: all 0.2s ease;
+                            flex-shrink: 0;
+                            padding: 0.25rem;
+                        }
+                        .logout-error-toast .toast-close:hover {
+                            color: #6b7280;
+                        };
+                    </style>
+                `);
+            }
+
+            // Fecha o modal com ESC
+            $(document).keydown(function(e) {
+                if (e.key === 'Escape' && $('#exitConfirmationDialog').hasClass('show')) {
+                    $('#exitConfirmationDialog').modal('hide');
+                }
+            });
+
+            // Remove o toast de erro ao mudar de página
+            $(window).on('beforeunload', function() {
+                $('.logout-error-toast').remove();
+            });
+        });
+    </script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

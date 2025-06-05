@@ -1,0 +1,529 @@
+﻿@model List<Poll>
+@using System.Linq
+@{
+    ViewData["Title"] = "Todas as Enquetes";
+    var currentUser = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value ?? "";
+}
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@ViewData["Title"]</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="~/css/listar.css" asp-append-version="true" />
+</head>
+<body>
+    <div class="bg-elements">
+        <div class="bg-circle bg-circle-1"></div>
+        <div class="bg-circle bg-circle-2"></div>
+        <div class="bg-circle bg-circle-3"></div>
+    </div>
+
+    <div class="main-container">
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success">
+                <i class="fas fa-check-circle"></i>
+                <span>@TempData["SuccessMessage"]</span>
+                <button class="alert-close" onclick="this.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        }
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-error">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>@TempData["ErrorMessage"]</span>
+                <button class="alert-close" onclick="this.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        }
+
+        <header class="page-header">
+            <div class="header-content">
+                <div class="header-text">
+                    <h1 class="main-title">
+                        <span class="title-gradient">Enquetes</span>
+                        <span class="title-accent">Ativas</span>
+                    </h1>
+                    <p class="subtitle">Descubra opiniões, compartilhe ideias e tome decisões inteligentes</p>
+                </div>
+                <div class="header-actions">
+                    <div class="stats-quick">
+                        <div class="stat-item">
+                            <span class="stat-number" id="totalPolls">@(Model?.Count ?? 0)</span>
+                            <span class="stat-label">Total</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number" id="activePolls">@(Model?.Count(p => !p.IsExpired) ?? 0)</span>
+                            <span class="stat-label">Ativas</span>
+                        </div>
+                    </div>
+                    <a href="@Url.Action("Criar")" class="btn-create">
+                        <i class="fas fa-plus"></i>
+                        <span>Nova Enquete</span>
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <section class="search-section">
+            <div class="search-container">
+                <div class="search-box-wrapper">
+                    <div class="search-input-container">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" id="searchInput" placeholder="Pesquisar por título, descrição ou autor..." class="search-input">
+                        <button class="search-clear" id="searchClear" style="display: none;">
+                            <i class="fas fa-times"></i>
+                        </button>   
+                    </div>
+                </div>
+                    <div class="filters-container">
+
+                        <div class="filter-group">
+                            <button class="filter-btn active" data-filter="all">
+                                <i class="fas fa-layer-group"></i>
+                                <span>Todas</span>
+                            </button>
+                            <button class="filter-btn" data-filter="active">
+                                <i class="fas fa-play-circle"></i>
+                                <span>Ativas</span>
+                            </button>
+                            <button class="filter-btn" data-filter="expired">
+                                <i class="fas fa-clock"></i>
+                                <span>Expiradas</span>
+                            </button>
+                            <button class="filter-btn" data-filter="mine">
+                                <i class="fas fa-user"></i>
+                                <span>Minhas</span>
+                            </button>
+                        </div>
+                    </div>
+            </div>
+
+            <div class="filter-summary" id="filterSummary" style="display: none;">
+                <div class="summary-content">
+                    <span id="filterSummaryText"></span>
+                    <button class="clear-filters" onclick="resetAllFilters()">
+                        <i class="fas fa-refresh"></i>
+                        Limpar Filtros
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <section class="polls-section">
+            <div class="polls-grid" id="pollsContainer">
+                @if (Model != null && Model.Any())
+                {
+                    @foreach (var poll in Model)
+                    {
+                        <article class="poll-card @(poll.IsExpired ? "expired" : "")"
+                                 data-active="@(!poll.IsExpired ? "true" : "false")"
+                                 data-expires="@(poll.ExpiresAt?.ToString("yyyy-MM-dd") ?? "")"
+                                 data-creator="@poll.CreatorUsername"
+                                 data-created="@poll.CreatedAt.ToString("yyyy-MM-dd")"
+                                 data-question="@poll.Question.ToLower()"
+                                 data-description="@(poll.Description?.ToLower() ?? "")"
+                                 data-votes="@poll.TotalVotes">
+
+                            <div class="card-header">
+                                <div class="status-badge @(poll.IsExpired ? "expired" : "active")">
+                                    <i class="fas @(poll.IsExpired ? "fa-clock" : "fa-pulse")"></i>
+                                    @(poll.IsExpired ? "Expirada" : "Ativa")
+                                </div>
+                            </div>
+
+                            <div class="card-content">
+                                <h3 class="poll-title">@poll.Question</h3>
+
+                                @if (!string.IsNullOrEmpty(poll.Description))
+                                {
+                                    <p class="poll-description">@poll.Description</p>
+                                }
+
+                                <div class="poll-meta">
+                                    <div class="meta-row">
+                                        <div class="creator-info">
+                                            <div class="creator-avatar">
+                                                @poll.CreatorUsername.Substring(0, 1).ToUpper()
+                                            </div>
+                                            <span class="creator-name">@poll.CreatorUsername</span>
+                                        </div>
+                                        <span class="creation-date">
+                                            <i class="fas fa-calendar-alt"></i>
+                                            @poll.CreatedAt.ToString("dd/MM/yyyy")
+                                        </span>
+                                    </div>
+
+                                    @if (poll.ExpiresAt.HasValue)
+                                    {
+                                        <div class="expiry-info">
+                                            <i class="fas fa-hourglass-half"></i>
+                                            <span>Expira: @poll.ExpiresAt.Value.ToString("dd/MM/yyyy HH:mm")</span>
+                                        </div>
+                                    }
+                                </div>
+
+                                <div class="poll-stats">
+                                    <div class="stat">
+                                        <div class="stat-icon">
+                                            <i class="fas fa-list"></i>
+                                        </div>
+                                        <div class="stat-info">
+                                            <span class="stat-value">@poll.Options.Count</span>
+                                            <span class="stat-label">Opções</span>
+                                        </div>
+                                    </div>
+                                    <div class="stat">
+                                        <div class="stat-icon">
+                                            <i class="fas fa-vote-yea"></i>
+                                        </div>
+                                        <div class="stat-info">
+                                            <span class="stat-value">@poll.TotalVotes</span>
+                                            <span class="stat-label">Votos</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <a href="@Url.Action("Detalhes", "Enquete", new { id = poll.Id })" class="vote-btn" onclick="console.log('Navigating to poll:', @poll.Id)">
+                                <i class="fas fa-chart-pie"></i>
+                                <span>Ver Resultados</span>
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </article>
+                    }
+                }
+            </div>
+        </section>
+
+        <div class="empty-state" id="initialEmptyState" style="@(Model?.Any() == true ? "display: none;" : "")">
+            <div class="empty-icon">
+                <i class="fas fa-poll-h"></i>
+            </div>
+            <h3>Nenhuma enquete por aqui ainda</h3>
+            <p>Seja o primeiro a criar uma enquete e começar a coletar opiniões valiosas da comunidade!</p>
+            <a href="@Url.Action("Criar")" class="btn-create">
+                <i class="fas fa-plus"></i>
+                <span>Criar Primeira Enquete</span>
+            </a>
+        </div>
+
+        <div class="empty-state" id="noResultsState" style="display: none;">
+            <div class="empty-icon">
+                <i class="fas fa-search-minus"></i>
+            </div>
+            <h3>Ops! Nada encontrado</h3>
+            <p>Não encontramos enquetes que correspondam aos seus critérios. Tente ajustar os filtros ou pesquisar por outros termos.</p>
+            <button class="btn-secondary" onclick="resetAllFilters()">
+                <i class="fas fa-refresh"></i>
+                <span>Limpar Filtros</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const currentUser = '@currentUser';
+        let currentSort = 'newest';
+        let currentFilter = 'all';
+        let searchTerm = '';
+
+        const searchInput = document.getElementById('searchInput');
+        const searchClear = document.getElementById('searchClear');
+        const sortBtn = document.getElementById('sortBtn');
+        const sortMenu = document.getElementById('sortMenu');
+        const pollsContainer = document.getElementById('pollsContainer');
+        const filterSummary = document.getElementById('filterSummary');
+        const filterSummaryText = document.getElementById('filterSummaryText');
+        const noResultsState = document.getElementById('noResultsState');
+        const initialEmptyState = document.getElementById('initialEmptyState');
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeEventListeners();
+            applyFiltersAndSort();
+            addCardAnimations();
+        });
+
+        function initializeEventListeners() {
+            searchInput.addEventListener('input', debounce(handleSearch, 300));
+            searchClear.addEventListener('click', clearSearch);
+
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.addEventListener('click', handleFilterClick);
+            });
+
+            sortBtn.addEventListener('click', toggleSortMenu);
+            document.querySelectorAll('.sort-option').forEach(option => {
+                option.addEventListener('click', handleSortClick);
+            });
+
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.sort-dropdown')) {
+                    sortMenu.classList.remove('show');
+                }
+            });
+
+
+            document.addEventListener('keydown', handleKeyboardShortcuts);
+        }
+
+        function handleSearch() {
+            searchTerm = searchInput.value.trim();
+
+            if (searchTerm) {
+                searchClear.style.display = 'block';
+                searchInput.parentElement.classList.add('has-content');
+            } else {
+                searchClear.style.display = 'none';
+                searchInput.parentElement.classList.remove('has-content');
+            }
+
+            applyFiltersAndSort();
+        }
+
+        function clearSearch() {
+            searchInput.value = '';
+            searchTerm = '';
+            searchClear.style.display = 'none';
+            searchInput.parentElement.classList.remove('has-content');
+            applyFiltersAndSort();
+        }
+
+        function handleFilterClick(e) {
+            const filterBtn = e.currentTarget;
+            const filter = filterBtn.dataset.filter;
+
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            filterBtn.classList.add('active');
+
+            currentFilter = filter;
+            applyFiltersAndSort();
+        }
+
+        function toggleSortMenu() {
+            sortMenu.classList.toggle('show');
+        }
+
+        function handleSortClick(e) {
+            const sortOption = e.currentTarget;
+            const sort = sortOption.dataset.sort;
+
+            document.querySelectorAll('.sort-option').forEach(opt => opt.classList.remove('active'));
+            sortOption.classList.add('active');
+
+            const sortText = sortOption.textContent.trim();
+            sortBtn.querySelector('span').textContent = sortText;
+
+            currentSort = sort;
+            sortMenu.classList.remove('show');
+            applyFiltersAndSort();
+        }
+
+        function applyFiltersAndSort() {
+            const polls = Array.from(document.querySelectorAll('.poll-card'));
+            let visibleCount = 0;
+
+            polls.forEach(poll => {
+                const matchesSearch = !searchTerm ||
+                    poll.dataset.question.includes(searchTerm.toLowerCase()) ||
+                    poll.dataset.description.includes(searchTerm.toLowerCase()) ||
+                    poll.dataset.creator.toLowerCase().includes(searchTerm.toLowerCase());
+
+                let matchesFilter = true;
+                switch (currentFilter) {
+                    case 'active':
+                        matchesFilter = poll.dataset.active === 'true';
+                        break;
+                    case 'expired':
+                        matchesFilter = poll.dataset.active === 'false';
+                        break;
+                    case 'mine':
+                        matchesFilter = poll.dataset.creator === currentUser;
+                        break;
+                }
+
+                const isVisible = matchesSearch && matchesFilter;
+
+                if (isVisible) {
+                    poll.style.display = 'block';
+                    poll.style.animationDelay = `${visibleCount * 0.1}s`;
+                    visibleCount++;
+                } else {
+                    poll.style.display = 'none';
+                }
+            });
+
+
+            sortPolls();
+
+            updateEmptyStates(visibleCount, polls.length);
+
+            updateFilterSummary(visibleCount, polls.length);
+
+            updateQuickStats();
+        }
+
+        function sortPolls() {
+            const container = pollsContainer;
+            const polls = Array.from(container.querySelectorAll('.poll-card[style*="block"], .poll-card:not([style*="none"])'));
+
+            polls.sort((a, b) => {
+                switch (currentSort) {
+                    case 'newest':
+                        return new Date(b.dataset.created) - new Date(a.dataset.created);
+                    case 'oldest':
+                        return new Date(a.dataset.created) - new Date(b.dataset.created);
+                    case 'votes':
+                        return parseInt(b.dataset.votes) - parseInt(a.dataset.votes);
+                    case 'alphabetical':
+                        return a.dataset.question.localeCompare(b.dataset.question);
+                    default:
+                        return 0;
+                }
+            });
+
+            polls.forEach((poll, index) => {
+                container.appendChild(poll);
+                poll.style.animationDelay = `${index * 0.05}s`;
+            });
+        }
+
+        function updateEmptyStates(visibleCount, totalCount) {
+            if (totalCount === 0) {
+                initialEmptyState.style.display = 'flex';
+                noResultsState.style.display = 'none';
+                pollsContainer.style.display = 'none';
+            } else if (visibleCount === 0) {
+                initialEmptyState.style.display = 'none';
+                noResultsState.style.display = 'flex';
+                pollsContainer.style.display = 'none';
+            } else {
+                initialEmptyState.style.display = 'none';
+                noResultsState.style.display = 'none';
+                pollsContainer.style.display = 'grid';
+            }
+        }
+
+        function updateFilterSummary(visibleCount, totalCount) {
+            const hasActiveFilters = searchTerm || currentFilter !== 'all';
+
+            if (!hasActiveFilters) {
+                filterSummary.style.display = 'none';
+                return;
+            }
+
+            let summaryParts = [];
+
+            if (searchTerm) {
+                summaryParts.push(`"${searchTerm}"`);
+            }
+
+            if (currentFilter !== 'all') {
+                const filterNames = {
+                    active: 'ativas',
+                    expired: 'expiradas',
+                    mine: 'suas enquetes'
+                };
+                summaryParts.push(filterNames[currentFilter]);
+            }
+
+            const summaryText = summaryParts.length > 0
+                ? `Exibindo ${visibleCount} de ${totalCount} enquetes • Filtros: ${summaryParts.join(', ')}`
+                : `Exibindo ${visibleCount} de ${totalCount} enquetes`;
+
+            filterSummaryText.textContent = summaryText;
+            filterSummary.style.display = 'block';
+        }
+
+        function updateQuickStats() {
+            const polls = document.querySelectorAll('.poll-card');
+            const activePolls = document.querySelectorAll('.poll-card[data-active="true"]');
+
+            document.getElementById('totalPolls').textContent = polls.length;
+            document.getElementById('activePolls').textContent = activePolls.length;
+        }
+
+        function resetAllFilters() {
+            searchInput.value = '';
+            searchTerm = '';
+            currentFilter = 'all';
+            currentSort = 'newest';
+
+            searchClear.style.display = 'none';
+            searchInput.parentElement.classList.remove('has-content');
+
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector('[data-filter="all"]').classList.add('active');
+
+            document.querySelectorAll('.sort-option').forEach(opt => opt.classList.remove('active'));
+            document.querySelector('[data-sort="newest"]').classList.add('active');
+            sortBtn.querySelector('span').textContent = 'Mais Recentes';
+
+            applyFiltersAndSort();
+        }
+
+        function handleKeyboardShortcuts(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+                e.preventDefault();
+                searchInput.focus();
+            }
+
+            if (e.key === 'Escape') {
+                if (sortMenu.classList.contains('show')) {
+                    sortMenu.classList.remove('show');
+                } else if (searchTerm || currentFilter !== 'all') {
+                    resetAllFilters();
+                }
+            }
+        }
+
+        function addCardAnimations() {
+            const cards = document.querySelectorAll('.poll-card');
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('animate-in');
+                    }
+                });
+            }, { threshold: 0.1 });
+
+            cards.forEach(card => {
+                observer.observe(card);
+                card.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-8px) scale(1.02)';
+                });
+
+                card.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0) scale(1)';
+                });
+            });
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        setTimeout(() => {
+            document.querySelectorAll('.alert').forEach(alert => {
+                alert.classList.add('fade-out');
+                setTimeout(() => alert.remove(), 300);
+            });
+        }, 5000);
+    </script>
+</body>
+</html>

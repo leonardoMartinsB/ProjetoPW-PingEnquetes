@@ -1,0 +1,403 @@
+﻿@model Poll
+@{
+    ViewData["Title"] = "Detalhes da Enquete";
+}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@ViewData["Title"]</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="~/css/detalhes.css" asp-append-version="true" />
+    @Html.AntiForgeryToken()
+</head>
+<body>
+    <div class="containerr">
+        <div class="poll-header">
+            <h1 class="poll-title">
+                @Model.Question
+                <span class="poll-status @(Model.IsActive ? "status-active" : "status-closed")">
+                    @(Model.IsActive ? "Ativa" : "Encerrada")
+                </span>
+            </h1>
+            <div class="poll-meta">
+                <div class="poll-meta-item">
+                    <i class="fas fa-user"></i>
+                    <span>Criada por: @Model.CreatorUsername</span>
+                </div>
+                <div class="poll-meta-item">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span>Data: @Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")</span>
+                </div>
+                <div class="poll-meta-item">
+                    <i class="fas fa-stopwatch"></i>
+                    <span>
+                        @if (Model.EndDate.Year == 9999 && Model.EndDate.Month == 12 && Model.EndDate.Day == 31)
+                        {
+                            <text>Sem data de encerramento</text>
+                        }
+                        else
+                        {
+                            <text>Encerra: @Model.EndDate.ToString("dd/MM/yyyy HH:mm")</text>
+                        }
+                    </span>
+                </div>
+            </div>
+            @if (!string.IsNullOrEmpty(Model.Description))
+            {
+                <div class="poll-description">
+                    <p>@Model.Description</p>
+                </div>
+            }
+        </div>
+        <div class="poll-content">
+            <div class="poll-voting-section">
+                <h2 class="section-title">
+                    <i class="fas fa-vote-yea"></i>
+                    Sua Votação
+                </h2>
+                @if (Model.IsActive)
+                {
+                    <form id="voteForm">
+                        <ul class="options-list">
+                            @foreach (var option in Model.Options)
+                            {
+                                <li class="option-item">
+                                    <input type="radio"
+                                           id="option-@option.Id"
+                                           name="selectedOption"
+                                           value="@option.Id"
+                                           class="option-radio"
+                                    @(ViewBag.UserVoted != null ? "disabled" : "")>
+                                    <label for="option-@option.Id" class="option-label">
+                                        <span class="custom-radio"></span>
+                                        @option.Text
+                                    </label>
+                                </li>
+                            }
+                        </ul>
+                        @if (ViewBag.UserVoted != null)
+                        {
+                            <div class="alert alert-info" style="padding: 1rem; background: #e2f0fd; border-radius: var(--border-radius); margin-bottom: 1.5rem;">
+                                <i class="fas fa-info-circle"></i> Você já votou nesta enquete.
+                            </div>
+                        }
+                        else
+                        {
+                            <button type="button" id="voteButton" class="vote-button" disabled>
+                                <i class="fas fa-paper-plane"></i> Confirmar Voto
+                            </button>
+                        }
+                    </form>
+                }
+                else
+                {
+                    <div class="alert alert-warning" style="padding: 1rem; background: #fff3cd; border-radius: var(--border-radius);">
+                        <i class="fas fa-exclamation-triangle"></i> Esta enquete está encerrada e não aceita mais votos.
+                    </div>
+                }
+            </div>
+            <div class="poll-results-section">
+                <h2 class="section-title">
+                    <i class="fas fa-chart-bar"></i>
+                    Resultados
+                </h2>
+                <div class="chart-toggle">
+                    <button class="chart-btn active" data-chart-type="bar">
+                        <i class="fas fa-chart-bar"></i> Barras
+                    </button>
+                    <button class="chart-btn" data-chart-type="pie">
+                        <i class="fas fa-chart-pie"></i> Pizza
+                    </button>
+                </div>
+                <div class="chart-container">
+                    <canvas id="resultsChart"></canvas>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalVotes">@Model.TotalVotes</div>
+                        <div class="stat-label">Total de Votos</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">@Model.Options.Count</div>
+                        <div class="stat-label">Opções</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="participantsCount">@Model.ParticipantsCount</div>
+                        <div class="stat-label">Participantes</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-overlay" id="confirmationModal">
+        <div class="modal-content">
+            <div class="modal-icon">
+                <i class="fas fa-question-circle"></i>
+            </div>
+            <h3 class="modal-title">Confirmar seu voto?</h3>
+            <p class="modal-text" id="selectedOptionText">Você está votando em: <strong></strong></p>
+            <p class="modal-text">Esta ação não pode ser desfeita.</p>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-cancel" id="cancelVote">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                <button class="modal-btn modal-btn-confirm" id="confirmVote">
+                    <i class="fas fa-check"></i> Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="modal-overlay" id="successModal">
+        <div class="modal-content">
+            <div class="modal-icon" style="color: var(--success-color);">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <h3 class="modal-title">Voto registrado!</h3>
+            <p class="modal-text">Obrigado por participar desta enquete.</p>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-confirm" id="closeSuccessModal">
+                    <i class="fas fa-thumbs-up"></i> Ótimo!
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="modal-overlay" id="errorModal">
+        <div class="modal-content">
+            <div class="modal-icon" style="color: #f72585;">
+                <i class="fas fa-exclamation-circle"></i>
+            </div>
+            <h3 class="modal-title">Erro ao votar</h3>
+            <p class="modal-text" id="errorMessage"></p>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-confirm" id="closeErrorModal">
+                    <i class="fas fa-times"></i> Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+    <script>
+        const pollId = @Model.Id;
+        let chartData = {
+            labels: @Html.Raw(Json.Serialize(Model.Options.Select(o => o.Text))),
+            datasets: [{
+                data: @Html.Raw(Json.Serialize(Model.Options.Select(o => o.Votes))),
+                backgroundColor: [
+                    '#4361ee', '#f72585', '#4cc9f0', '#7209b7', '#4895ef',
+                    '#b5179e', '#3f37c9', '#560bad', '#480ca8', '#3a0ca3'
+                ],
+                borderColor: '#fff',
+                borderWidth: 2
+            }]
+        };
+        const commonOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        boxWidth: 12,
+                        padding: 20,
+                        font: {
+                            size: 12
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const value = context.raw;
+                            const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                            return `${context.label}: ${value} votos (${percentage}%)`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        precision: 0
+                    }
+                }
+            }
+        };
+        let currentChart = new Chart(
+            document.getElementById('resultsChart'),
+            {
+                type: 'bar',
+                data: chartData,
+                options: {
+                    ...commonOptions,
+                    indexAxis: 'x',
+                    scales: {
+                        ...commonOptions.scales,
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            }
+        );
+        document.querySelectorAll('.chart-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.chart-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                const chartType = this.dataset.chartType;
+                currentChart.destroy();
+                currentChart = new Chart(
+                    document.getElementById('resultsChart'),
+                    {
+                        type: chartType,
+                        data: chartData,
+                        options: chartType === 'pie' ? {
+                            ...commonOptions,
+                            cutout: '70%'
+                        } : {
+                            ...commonOptions,
+                            indexAxis: 'x',
+                            scales: {
+                                ...commonOptions.scales,
+                                x: {
+                                    grid: {
+                                        display: false
+                                    }
+                                }
+                            }
+                        }
+                    }
+                );
+            });
+        });
+        const voteForm = document.getElementById('voteForm');
+        const voteButton = document.getElementById('voteButton');
+        const confirmationModal = document.getElementById('confirmationModal');
+        const successModal = document.getElementById('successModal');
+        const errorModal = document.getElementById('errorModal');
+        const selectedOptionText = document.getElementById('selectedOptionText').querySelector('strong');
+        const errorMessage = document.getElementById('errorMessage');
+        function getAntiForgeryToken() {
+            return document.querySelector('input[name="__RequestVerificationToken"]').value;
+        }
+        function updateChartData(newData) {
+            chartData.datasets[0].data = newData;
+            currentChart.data = chartData;
+            currentChart.update();
+        }
+        function updateStats(totalVotes, participantsCount) {
+            document.getElementById('totalVotes').textContent = totalVotes;
+            document.getElementById('participantsCount').textContent = participantsCount;
+        }
+        function showModal(modal) {
+            modal.classList.add('active');
+        }
+        function hideModal(modal) {
+            modal.classList.remove('active');
+        }
+        if (voteForm) {
+            const radioButtons = voteForm.querySelectorAll('.option-radio');
+            radioButtons.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    voteButton.disabled = !this.checked;
+                });
+            });
+            voteButton.addEventListener('click', function() {
+                const selectedRadio = voteForm.querySelector('.option-radio:checked');
+                if (selectedRadio) {
+                    const selectedLabel = document.querySelector(`label[for="${selectedRadio.id}"]`);
+                    selectedOptionText.textContent = selectedLabel.textContent.trim();
+                    showModal(confirmationModal);
+                }
+            });
+        }
+        document.getElementById('cancelVote').addEventListener('click', function() {
+            hideModal(confirmationModal);
+        });
+        document.getElementById('confirmVote').addEventListener('click', function() {
+            hideModal(confirmationModal);
+            const selectedRadio = document.querySelector('.option-radio:checked');
+            if (selectedRadio) {
+                const optionId = parseInt(selectedRadio.value);
+                submitVote(optionId);
+            }
+        });
+        document.getElementById('closeSuccessModal').addEventListener('click', function() {
+            hideModal(successModal);
+            window.location.reload();
+        });
+        document.getElementById('closeErrorModal').addEventListener('click', function() {
+            hideModal(errorModal);
+        });
+        function submitVote(optionId) {
+            voteButton.disabled = true;
+            voteButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+            fetch('/Enquete/Vote', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': getAntiForgeryToken()
+                },
+                body: JSON.stringify({
+                    PollId: pollId,
+                    OptionId: optionId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateChartData(data.voteCounts);
+                    updateStats(data.totalVotes, data.participantsCount);
+                    showModal(successModal);
+                    const radioButtons = document.querySelectorAll('.option-radio');
+                    radioButtons.forEach(radio => {
+                        radio.disabled = true;
+                    });
+                    voteButton.style.display = 'none';
+                    const votingSection = document.querySelector('.poll-voting-section');
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'alert alert-info';
+                    alertDiv.style.cssText = 'padding: 1rem; background: #e2f0fd; border-radius: var(--border-radius); margin-bottom: 1.5rem;';
+                    alertDiv.innerHTML = '<i class="fas fa-info-circle"></i> Você já votou nesta enquete.';
+                    votingSection.appendChild(alertDiv);
+                } else {
+                    errorMessage.textContent = data.message;
+                    showModal(errorModal);
+                    voteButton.disabled = false;
+                    voteButton.innerHTML = '<i class="fas fa-paper-plane"></i> Confirmar Voto';
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                errorMessage.textContent = 'Erro de conexão. Tente novamente.';
+                showModal(errorModal);
+                voteButton.disabled = false;
+                voteButton.innerHTML = '<i class="fas fa-paper-plane"></i> Confirmar Voto';
+            });
+        }
+        window.addEventListener('click', function(event) {
+            if (event.target.classList.contains('modal-overlay')) {
+                hideModal(event.target);
+            }
+        });
+        setInterval(function() {
+            fetch(`/Enquete/GetPollResults?id=${pollId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateChartData(data.voteCounts);
+                    updateStats(data.totalVotes, data.participantsCount);
+                }
+            })
+            .catch(error => {
+                console.log('Erro ao atualizar resultados:', error);
+            });
+        }, 30000);
+    </script>
+</body>
+</html>

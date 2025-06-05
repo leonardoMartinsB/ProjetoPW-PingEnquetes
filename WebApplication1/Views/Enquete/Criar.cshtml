@@ -1,0 +1,126 @@
+﻿@{
+    ViewData["Title"] = "Criar Enquete";
+}
+
+<link rel="stylesheet" href="~/css/criar.css" asp-append-version="true" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+<div class="poll-create-container">
+    <div class="create-header">
+        <h2>Criar Nova Enquete</h2>
+        <p>Preencha os detalhes abaixo para criar uma enquete interativa</p>
+    </div>
+
+    <form asp-action="Criar" method="post" class="poll-create-form">
+        <div class="form-section">
+            <div class="form-group">
+                <label for="question" class="form-label">
+                    <i class="fas fa-question-circle"></i> Pergunta da Enquete
+                </label>
+                <input type="text" id="question" name="question" class="form-input" required
+                       placeholder="Ex: Qual é o melhor framework para desenvolvimento web em 2023?">
+                <div class="form-hint">Seja claro e objetivo na sua pergunta</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-list-ol"></i> Opções de Resposta
+                    <span class="badge">mínimo 2</span>
+                </label>
+                <div id="options-container" class="options-container">
+                    <div class="option-input">
+                        <div class="input-group">
+                            <span class="option-number">1</span>
+                            <input type="text" name="options" class="form-input" required
+                                   placeholder="Digite uma opção">
+                            <button type="button" class="btn-remove-option" disabled>
+                                <i class="fas fa-lock"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="option-input">
+                        <div class="input-group">
+                            <span class="option-number">2</span>
+                            <input type="text" name="options" class="form-input" required
+                                   placeholder="Digite outra opção">
+                            <button type="button" class="btn-remove-option" disabled>
+                                <i class="fas fa-lock"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" id="add-option" class="btn-add-option">
+                    <i class="fas fa-plus"></i> Adicionar outra opção
+                </button>
+                <div class="form-hint">Máximo recomendado: 6 opções</div>
+            </div>
+
+            <div class="form-group">
+                <label for="expireDateTime" class="form-label">
+                    <i class="fas fa-clock"></i> Data de Expiração
+                </label>
+                <input type="text" id="expireDateTime" name="expireDateTime"
+                       class="form-input datetime-input" placeholder="Selecione data e hora">
+                <div class="form-hint">Deixe em branco para enquete sem expiração</div>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-submit">
+                <i class="fas fa-check-circle"></i> Criar Enquete
+            </button>
+            <a href="@Url.Action("Index")" class="btn-cancel">Cancelar</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
+    <script>
+        flatpickr("#expireDateTime", {
+            enableTime: true,
+            dateFormat: "d/m/Y H:i",
+            minDate: "today",
+            time_24hr: true,
+            locale: "pt"
+        });
+
+        document.getElementById('add-option').addEventListener('click', function() {
+            const container = document.getElementById('options-container');
+            const optionCount = container.querySelectorAll('.option-input').length + 1;
+
+            if (optionCount > 6) {
+                alert('Recomendamos no máximo 6 opções para melhor experiência');
+                return;
+            }
+
+            const div = document.createElement('div');
+            div.className = 'option-input';
+            div.innerHTML = `
+                <div class="input-group">
+                    <span class="option-number">${optionCount}</span>
+                    <input type="text" name="options" class="form-input" required
+                           placeholder="Digite outra opção">
+                    <button type="button" class="btn-remove-option">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('btn-remove-option') ||
+                e.target.closest('.btn-remove-option')) {
+                const optionInput = e.target.closest('.option-input');
+                if (!optionInput.querySelector('.btn-remove-option').disabled) {
+                    optionInput.remove();
+                    document.querySelectorAll('.option-number').forEach((span, index) => {
+                        span.textContent = index + 1;
+                    });
+                }
+            }
+        });
+    </script>
+}

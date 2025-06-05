@@ -1,0 +1,95 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ping! - Sistema de Enquetes</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/anime.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/index.css" asp-append-version="true" />
+</head>
+<body>
+    <section class="hero-section">
+        <div class="floating-elements">
+            <div class="floating-element"></div>
+            <div class="floating-element"></div>
+            <div class="floating-element"></div>
+        </div>
+
+        <div class="hero-container">
+            <div class="hero-content">
+                <h1 class="hero-title">Transforme opiniões em decisões</h1>
+                <p class="hero-subtitle">
+                    Crie enquetes interativas, colete votos em tempo real e tome decisões baseadas em dados com a plataforma mais moderna do mercado.
+                </p>
+                <div class="hero-buttons">
+                    <a href="/Enquete/Criar" class="btn btn-primary">
+                        <i class="fas fa-rocket"></i>
+                        Criar Enquete
+                    </a>
+                    <a href="/Enquete/Listar" class="btn btn-secondary">
+                        <i class="fas fa-chart-bar"></i>
+                        Explorar Enquetes
+                    </a>
+                </div>
+            </div>
+
+            <div class="hero-visual">
+                <div class="poll-card">
+                    <div class="poll-question">
+                        Qual é sua linguagem de programação favorita?
+                    </div>
+                    <div class="poll-option selected">
+                        <span>C# / .NET</span>
+                        <div class="poll-progress" style="width: 45%"></div>
+                    </div>
+                    <div class="poll-option">
+                        <span>JavaScript</span>
+                        <div class="poll-progress" style="width: 30%"></div>
+                    </div>
+                    <div class="poll-option">
+                        <span>Python</span>
+                        <div class="poll-progress" style="width: 25%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="features-section">
+        <div class="features-container">
+            <h2 class="features-title">Por que escolher o Ping! ?</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <h3 class="feature-title">Criação Instantânea</h3>
+                    <p class="feature-description">
+                        Monte sua enquete em segundos com nossa interface intuitiva e moderna. Adicione perguntas, opções e personalize tudo do seu jeito.
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h3 class="feature-title">Dados em Tempo Real</h3>
+                    <p class="feature-description">
+                        Acompanhe cada voto instantaneamente com gráficos dinâmicos e atualizações automáticas. Nunca perca uma mudança importante.
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h3 class="feature-title">Seguro e Confiável</h3>
+                    <p class="feature-description">
+                        Sistema robusto que garante a integridade dos votos e protege os dados dos participantes com criptografia de ponta.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+    <script src="~/js/index.js" asp-append-version="true"></script>
+</body>
+</html>

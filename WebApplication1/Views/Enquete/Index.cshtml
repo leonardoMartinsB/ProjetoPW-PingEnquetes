@@ -1,0 +1,43 @@
+﻿@model List<Poll>
+@{
+    ViewData["Title"] = "Enquetes";
+}
+
+<link rel="stylesheet" href="~/css/enquete.css" asp-append-version="true" />
+
+<div class="poll-platform-container">
+    <div class="hero-section">
+        <div class="hero-content">
+            <h1>Transforme opiniões em decisões</h1>
+            <p class="lead">Crie enquetes interativas, colete votos em tempo real e tome decisões baseadas em dados com a plataforma mais moderna do mercado.</p>
+        </div>
+    </div>
+    <div class="main-actions">
+        <div class="action-card create-poll">
+            <div class="card-content">
+                <div class="icon-container">
+                    <i class="fas fa-plus-circle"></i>
+                </div>
+                <h3>Criar Enquete</h3>
+                <p>Crie uma nova enquete personalizada em segundos e compartilhe com seu público.</p>
+                <a asp-controller="Enquete" asp-action="Criar" class="btn btn-action">
+                    Começar agora <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+            <div class="card-decoration"></div>
+        </div>
+        <div class="action-card explore-polls">
+            <div class="card-content">
+                <div class="icon-container">
+                    <i class="fas fa-chart-bar"></i>
+                </div>
+                <h3>Explorar Enquetes</h3>
+                <p>Participe de enquetes existentes e veja resultados em tempo real.</p>
+                <a asp-controller="Enquete" asp-action="Listar" class="btn btn-action">
+                    Ver Enquetes <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+            <div class="card-decoration"></div>
+        </div>
+    </div>
+</div>
